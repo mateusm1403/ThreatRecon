@@ -124,17 +124,17 @@ Copy-Item .env.example .env
 
 ## Uso
 
-Executar scan
+### Executar scan
 python main.py scan example.com
-Ver histórico
+### Ver histórico
 python main.py history
-Ver histórico de um domínio
+### Ver histórico de um domínio
 python main.py history example.com --limit 5
-Executar com logs detalhados
+### Executar com logs detalhados
 python main.py scan example.com --verbose
-Limitar crawling
+### Limitar crawling
 python main.py scan example.com --max-pages 5
-Desabilitar crt.sh
+### Desabilitar crt.sh
 python main.py scan example.com --no-crtsh
 
 ## Exemplo de Saída
