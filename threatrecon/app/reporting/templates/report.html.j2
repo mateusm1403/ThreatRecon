@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ThreatRecon Report - {{ result.domain }}</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --text: #17202a;
+      --muted: #657180;
+      --line: #dfe5ec;
+      --accent: #0b6bcb;
+      --critical: #b42318;
+      --medium: #b54708;
+      --low: #175cd3;
+      --info: #475467;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      background: #101828;
+      color: #fff;
+      padding: 32px 40px;
+    }
+    main { max-width: 1180px; margin: 0 auto; padding: 28px 20px 48px; }
+    h1, h2, h3 { margin: 0; line-height: 1.2; }
+    h1 { font-size: 30px; }
+    h2 { font-size: 20px; margin-bottom: 14px; }
+    h3 { font-size: 15px; color: var(--muted); margin-bottom: 8px; }
+    .subtitle { margin-top: 8px; color: #cdd5df; }
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 18px;
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    }
+    .metric { font-size: 30px; font-weight: 750; color: var(--accent); }
+    .label { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .score {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 112px;
+      height: 112px;
+      border-radius: 999px;
+      border: 12px solid var(--accent);
+      font-size: 30px;
+      font-weight: 800;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { border-bottom: 1px solid var(--line); padding: 10px 8px; text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+    code { word-break: break-word; white-space: pre-wrap; }
+    .badge { display: inline-block; border-radius: 999px; padding: 3px 9px; font-size: 12px; font-weight: 700; }
+    .critical { color: #fff; background: var(--critical); }
+    .high { color: #fff; background: var(--critical); }
+    .medium { color: #fff; background: var(--medium); }
+    .low { color: #fff; background: var(--low); }
+    .info { color: #fff; background: var(--info); }
+    .muted { color: var(--muted); }
+    .two-col { display: grid; grid-template-columns: 280px 1fr; gap: 20px; align-items: center; }
+    @media (max-width: 840px) {
+      header { padding: 24px 20px; }
+      .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .two-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ThreatRecon Report</h1>
+    <div class="subtitle">{{ result.domain }} | Scan #{{ result.scan_id }} | {{ result.completed_at.strftime("%Y-%m-%d %H:%M UTC") }}</div>
+  </header>
+  <main>
+    <section class="grid">
+      <div class="panel"><div class="metric">{{ result.summary.total_findings }}</div><div class="label">Total findings</div></div>
+      <div class="panel"><div class="metric">{{ result.summary.pages_crawled }}</div><div class="label">Pages crawled</div></div>
+      <div class="panel"><div class="metric">{{ result.summary.pdfs_analyzed }}</div><div class="label">PDFs analyzed</div></div>
+      <div class="panel"><div class="metric">{{ result.summary.critical_indicators | length }}</div><div class="label">Critical indicators</div></div>
+    </section>
+
+    <section class="panel two-col">
+      <div><div class="score">{{ result.exposure_score }}</div></div>
+      <div>
+        <h2>Executive Summary</h2>
+        <p class="muted">
+          This passive OSINT scan collected public web pages, certificate transparency names,
+          PDF metadata, visible technologies, exposed contact data, and possible secret patterns.
+          The exposure score is a heuristic from 0 to 100 based on volume and severity of findings.
+        </p>
+        <p>
+          New findings since the previous scan: <strong>{{ result.changes.new | length }}</strong>.
+          Resolved findings: <strong>{{ result.changes.resolved | length }}</strong>.
+        </p>
+      </div>
+    </section>
+
+    {% for section, title in [
+      ("email", "Emails Found"),
+      ("subdomain", "Subdomains"),
+      ("ip", "IPs"),
+      ("technology", "Technologies"),
+      ("possible_secret", "Possible Leaks"),
+      ("pdf_metadata", "PDF Metadata")
+    ] %}
+    <section class="panel">
+      <h2>{{ title }}</h2>
+      {% set items = by_type.get(section, []) %}
+      {% if items %}
+      <table>
+        <thead><tr><th>Severity</th><th>Value</th><th>Source</th><th>Evidence</th></tr></thead>
+        <tbody>
+          {% for item in items %}
+          <tr>
+            <td><span class="badge {{ item.severity }}">{{ item.severity }}</span></td>
+            <td><code>{{ item.value }}</code></td>
+            <td><code>{{ item.source }}</code></td>
+            <td>{{ item.evidence }}{% if item.metadata %}<br><span class="muted">{{ item.metadata }}</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="muted">No findings in this category.</p>
+      {% endif %}
+    </section>
+    {% endfor %}
+
+    <section class="panel">
+      <h2>Changes Since Last Scan</h2>
+      <h3>New</h3>
+      {% if result.changes.new %}
+      <table>
+        <thead><tr><th>Type</th><th>Severity</th><th>Value</th><th>Source</th></tr></thead>
+        <tbody>
+          {% for item in result.changes.new[:30] %}
+          <tr><td>{{ item.type }}</td><td><span class="badge {{ item.severity }}">{{ item.severity }}</span></td><td><code>{{ item.value }}</code></td><td><code>{{ item.source }}</code></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="muted">No new findings compared with the previous scan.</p>
+      {% endif %}
+      <h3>Resolved</h3>
+      {% if result.changes.resolved %}
+      <table>
+        <thead><tr><th>Type</th><th>Severity</th><th>Value</th><th>Source</th></tr></thead>
+        <tbody>
+          {% for item in result.changes.resolved[:30] %}
+          <tr><td>{{ item.type }}</td><td><span class="badge {{ item.severity }}">{{ item.severity }}</span></td><td><code>{{ item.value }}</code></td><td><code>{{ item.source }}</code></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="muted">No resolved findings compared with the previous scan.</p>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>
